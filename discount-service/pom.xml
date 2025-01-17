@@ -85,6 +85,11 @@
 			</exclusions>
 		</dependency>
 
+		<dependency>
+			<groupId>net.devh</groupId>
+			<artifactId>grpc-server-spring-boot-starter</artifactId>
+			<version>2.15.0.RELEASE</version>
+		</dependency>
 		<!-- Javax Annotation API (needed for some annotations) -->
 		<dependency>
 			<groupId>javax.annotation</groupId>
