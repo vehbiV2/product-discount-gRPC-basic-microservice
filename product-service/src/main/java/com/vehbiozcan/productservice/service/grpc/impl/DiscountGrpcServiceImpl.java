@@ -1,8 +1,6 @@
 package com.vehbiozcan.productservice.service.grpc.impl;
 
-import com.vehbiozcan.grpc.DiscountRequest;
-import com.vehbiozcan.grpc.DiscountResponse;
-import com.vehbiozcan.grpc.DiscountServiceGrpc;
+import com.vehbiozcan.grpc.*;
 import com.vehbiozcan.productservice.service.grpc.IDiscountGrpcService;
 import lombok.RequiredArgsConstructor;
 import io.grpc.ManagedChannel;
@@ -44,5 +42,11 @@ public class DiscountGrpcServiceImpl implements IDiscountGrpcService {
     public DiscountResponse getDiscount(DiscountRequest request) {
         return discountStub.getDiscount(request);
 
+    }
+
+    @Override
+    public DiscountListResponse getAllDiscount() {
+        // Boş parametreli gideceği için bu şekilde tanımladık
+        return discountStub.getAllDiscount(Empty.newBuilder().build());
     }
 }

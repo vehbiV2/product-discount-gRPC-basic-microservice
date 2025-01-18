@@ -1,5 +1,6 @@
 package com.vehbiozcan.productservice.service;
 
+import com.vehbiozcan.grpc.DiscountListResponse;
 import com.vehbiozcan.grpc.DiscountRequest;
 import com.vehbiozcan.grpc.DiscountResponse;
 import com.vehbiozcan.grpc.DiscountServiceGrpc;
@@ -26,6 +27,11 @@ public class DiscountService {
                 .setExternalCategoryId(product.getCategory().getId())
                 .build();
         return discountGrpcService.getDiscount(discountRequest);
+    }
+
+    // Parametresiz ve tüm discount türlerlerini çeken metot
+    public DiscountListResponse getAllDiscount(){
+        return discountGrpcService.getAllDiscount();
     }
 
 }
