@@ -8,8 +8,6 @@ Projenin OpenAPI Swagger Dökümanı: http://localhost:8080/swagger-ui/index.htm
 
 # Görev 4 : gRPC Entegrasyonu
 
-<details>
-<summary><h3 style="display: inline-block">Detayları Görüntüle</h3></summary>
 
 ## Yapılacaklar:
 
@@ -428,5 +426,4 @@ Tüm discount türlerini getirir (gRPC kullanır)
 
 
 
-</details>
 
