@@ -56,6 +56,7 @@ Projenin OpenAPI Swagger Dökümanı: http://localhost:8080/swagger-ui/index.htm
     - [Konsol Görüntüsü](#konsol-görüntüsü)
     - [Postman Görüntüleri](#postman-görüntüleri)
     - [Swagger Görüntüleri](#swagger-görüntüleri)
+14. [Kaynaklar](#kaynaklar)
         
     
 ## Dökümantasyon
@@ -424,6 +425,13 @@ Kategori ekler
 Tüm discount türlerini getirir (gRPC kullanır)
 ![swaggergrpc2](images/grpcprmlss.PNG)
 
+## Kaynaklar
 
-
+- [Berat Yesbek YouTube](https://www.youtube.com/watch?v=w0jvG_Mvln4&list=PL3ZqtT5kdwSH5vKiJbMPX0IM5ffl_WPCt&index=1)
+- [Gençay Yıldız](https://www.gencayyildiz.com/blog/grpc-nedir-ne-amacla-ve-nasil-kullanilir/)
+- [gRPC.io](https://grpc.io/docs/what-is-grpc/)
+- [Medium 1 (Serhat Ataş)](https://medium.com/@serhatats/grpc-nedir-f96a341953b2)
+- [Medium 2 (Serhat Ataş)](https://medium.com/@serhatats/spring-boot-ile-grpc-projesi-a6ccf60b6470)
+- [Infracloud](https://www.infracloud.io/blogs/understanding-grpc-concepts-best-practices/)
+- [gRPC Spring Boot Starter](https://github.com/yidongnan/grpc-spring-boot-starter)
 
