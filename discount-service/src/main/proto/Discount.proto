@@ -5,6 +5,7 @@ option java_multiple_files = true;
 
 service DiscountService {
   rpc getDiscount(DiscountRequest) returns (DiscountResponse);
+  rpc getAllDiscount(Empty) returns (DiscountListResponse);
 }
 
 message DiscountResponse {
@@ -18,6 +19,18 @@ message DiscountRequest {
   string code = 1;
   float price = 2;
   int64 externalCategoryId = 3;
+}
+
+message Empty {}
+
+message DiscountType {
+  int64 id = 1;
+  string code = 2;
+  float discountPrice = 3;
+}
+
+message DiscountListResponse {
+  repeated DiscountType discounts = 1;
 }
 
 message Response{

@@ -4,17 +4,16 @@ import com.vehbiozcan.discountservice.entity.Category;
 import com.vehbiozcan.discountservice.entity.Discount;
 import com.vehbiozcan.discountservice.repository.CategoryRepository;
 import com.vehbiozcan.discountservice.repository.DiscountRepository;
-import com.vehbiozcan.grpc.DiscountRequest;
-import com.vehbiozcan.grpc.DiscountResponse;
-import com.vehbiozcan.grpc.DiscountServiceGrpc;
-import com.vehbiozcan.grpc.Response;
+import com.vehbiozcan.grpc.*;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import net.devh.boot.grpc.server.service.GrpcService;
 
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @GrpcService
 @RequiredArgsConstructor
@@ -66,6 +65,31 @@ public class DiscountGrpcService extends DiscountServiceGrpc.DiscountServiceImpl
         /// responseObserver.onCompleted() cliente artık işlemin tamamlandığı bilgisi verir.
         responseObserver.onCompleted();
 
+    }
+
+    @Override
+    public void getAllDiscount(Empty request, StreamObserver<DiscountListResponse> responseObserver) {
+        // Veritabanından tüm discountları aldık
+        List<Discount> discountList= discountRepository.findAll();
+
+        //Discount nesnelerimizi protoda tanımladığımız şekliyle gRPC yanıt formatına çevirdik
+        // Liste formatında geldiği için liste formatına dönüştürdük
+        List<DiscountType> discountTypeList = discountList.stream()
+                .map(discount ->
+                        DiscountType.newBuilder()
+                                .setCode(discount.getCode())
+                                .setDiscountPrice(discount.getDiscountPrice().floatValue())
+                                .setId(discount.getId())
+                        .build()).collect(Collectors.toList());
+
+        // Sonra listeyi yine proto dosyasnda tanımladığımız grpc liste formatına dönüştürdük
+        DiscountListResponse response = DiscountListResponse.newBuilder()
+                .addAllDiscounts(discountTypeList)
+                .build();
+        // Response olarak döndük
+        responseObserver.onNext(response);
+        // Kanalı kapattık
+        responseObserver.onCompleted();
     }
 }
 
