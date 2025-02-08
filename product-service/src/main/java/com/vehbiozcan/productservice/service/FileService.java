@@ -2,6 +2,7 @@ package com.vehbiozcan.productservice.service;
 
 import com.vehbiozcan.grpc.UploadStatus;
 import com.vehbiozcan.productservice.service.grpc.impl.DiscountGrpcServiceImpl;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -11,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class FileService {
 
     private final DiscountGrpcServiceImpl discountGrpcService;
+    //private final FileServiceClient fileServiceClient;
 
     public UploadStatus uploadFile(MultipartFile file) {
         try {
@@ -23,4 +25,5 @@ public class FileService {
                     .build();
         }
     }
+
 }

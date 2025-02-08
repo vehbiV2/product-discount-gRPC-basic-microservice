@@ -7,6 +7,7 @@ service DiscountService {
     rpc getDiscount(DiscountRequest) returns (DiscountResponse);
     rpc getAllDiscount(Empty) returns (DiscountListResponse);
     rpc uploadFile(stream FileChunk) returns (UploadStatus);
+    rpc uploadAsyncFile(stream FileChunk) returns (UploadStatus);
 }
 
 message DiscountRequest {

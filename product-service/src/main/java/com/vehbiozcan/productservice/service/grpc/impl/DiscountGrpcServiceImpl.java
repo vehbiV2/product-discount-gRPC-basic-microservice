@@ -13,7 +13,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -109,6 +115,128 @@ public class DiscountGrpcServiceImpl implements IDiscountGrpcService {
 
         // Sonucun gelmesi için bekliyoruz (örn. 1 dakika)
         if (!finishLatch.await(1, TimeUnit.MINUTES)) {
+            throw new RuntimeException("Upload timed out");
+        }
+        return statusResponse[0];
+    }
+
+
+
+    /*public UploadStatus uploadAsyncFile(MultipartFile file) throws InterruptedException {
+        final CountDownLatch finishLatch = new CountDownLatch(1);
+        final UploadStatus[] statusResponse = new UploadStatus[1];
+
+        // Response observer: sunucudan gelen sonucu yakalıyoruz.
+        StreamObserver<UploadStatus> responseObserver = new StreamObserver<UploadStatus>() {
+            @Override
+            public void onNext(UploadStatus value) {
+                System.out.println("Server Response: " + value.getMessage());
+                statusResponse[0] = value;
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                System.err.println("Error: " + t.getMessage());
+                statusResponse[0] = UploadStatus.newBuilder().setSuccess(false).setMessage("Upload failed: " + t.getMessage()).build();
+                finishLatch.countDown();
+
+            }
+
+            @Override
+            public void onCompleted() {
+                System.out.println("File upload completed.");
+                finishLatch.countDown();
+
+            }
+        };
+
+        // Sunucuya göndermek üzere request observer'ı oluşturuyoruz.
+        StreamObserver<FileChunk> requestObserver = discountAsyncStub.uploadAsyncFile(responseObserver);
+
+
+            try (InputStream is = file.getInputStream()) {
+                byte[] buffer = new byte[64 * 1024]; // 64KB'lık parça
+                int bytesRead;
+                boolean isFirst = true;
+                while ((bytesRead = is.read(buffer)) != -1) {
+                    FileChunk.Builder chunkBuilder = FileChunk.newBuilder()
+                            .setContent(ByteString.copyFrom(buffer, 0, bytesRead));
+                    if (isFirst) {
+                        chunkBuilder.setFileName(file.getOriginalFilename())
+                                .setIsFirst(true);
+                        isFirst = false;
+                    }
+                    requestObserver.onNext(chunkBuilder.build());
+                    Thread.sleep(10);
+                }
+            } catch (IOException e) {
+                requestObserver.onError(e);
+            }
+            // Dosya gönderiminin tamamlandığını bildiriyoruz.
+            requestObserver.onCompleted();
+        // Sonucun gelmesi için bekliyoruz (örn. 1 dakika)
+        if (!finishLatch.await(2, TimeUnit.MINUTES)) {
+            throw new RuntimeException("Upload timed out");
+        }
+        return statusResponse[0];
+    }
+*/
+
+    public UploadStatus uploadAsyncFile(MultipartFile file) throws InterruptedException {
+        final CountDownLatch finishLatch = new CountDownLatch(1);
+        final UploadStatus[] statusResponse = new UploadStatus[1];
+
+        StreamObserver<UploadStatus> responseObserver = new StreamObserver<UploadStatus>() {
+            @Override
+            public void onNext(UploadStatus value) {
+                System.out.println("Server Response: " + value.getMessage());
+                statusResponse[0] = value;
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                System.err.println("Error: " + t.getMessage());
+                statusResponse[0] = UploadStatus.newBuilder()
+                        .setSuccess(false)
+                        .setMessage("Upload failed: " + t.getMessage())
+                        .build();
+                finishLatch.countDown();
+            }
+
+            @Override
+            public void onCompleted() {
+                System.out.println("File upload completed.");
+                finishLatch.countDown();
+            }
+        };
+
+        StreamObserver<FileChunk> requestObserver = discountAsyncStub.uploadAsyncFile(responseObserver);
+
+        try (InputStream is = file.getInputStream()) {
+            byte[] buffer = new byte[128 * 1024];
+            int bytesRead;
+            boolean isFirst = true;
+
+            while ((bytesRead = is.read(buffer)) != -1) {
+                FileChunk.Builder chunkBuilder = FileChunk.newBuilder()
+                        .setContent(ByteString.copyFrom(buffer, 0, bytesRead));
+
+                if (isFirst) {
+                    chunkBuilder.setFileName(file.getOriginalFilename())
+                            .setIsFirst(true);
+                    isFirst = false;
+                }
+                requestObserver.onNext(chunkBuilder.build());
+                Thread.sleep(20);
+            }
+        } catch (IOException e) {
+            requestObserver.onError(e);
+            throw new RuntimeException("File reading error", e);
+        }
+
+        requestObserver.onCompleted();
+
+        if (!finishLatch.await(2, TimeUnit.MINUTES)) {
             throw new RuntimeException("Upload timed out");
         }
         return statusResponse[0];

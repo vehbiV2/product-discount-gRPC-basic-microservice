@@ -5,6 +5,7 @@ import com.vehbiozcan.discountservice.entity.Discount;
 import com.vehbiozcan.discountservice.repository.CategoryRepository;
 import com.vehbiozcan.discountservice.repository.DiscountRepository;
 import com.vehbiozcan.grpc.*;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,14 +13,17 @@ import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.beans.factory.annotation.Value;
 
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 @GrpcService
@@ -159,6 +163,269 @@ public class DiscountGrpcService extends DiscountServiceGrpc.DiscountServiceImpl
             }
         };
     }
+
+    // FileOutputStream Kullanılıyor
+   /* @Override
+    public StreamObserver<FileChunk> uploadAsyncFile(StreamObserver<UploadStatus> responseObserver) {
+        return new StreamObserver<FileChunk>() {
+
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            String fileName = "uploaded_file.pdf"; // default değer, ilk chunk'ta güncellenecek
+
+            @Override
+            public void onNext(FileChunk chunk) {
+                // İlk chunk'ta dosya adını da gönderiyoruz
+                if (chunk.getIsFirst()) {
+                    fileName = chunk.getFileName();
+                    log.info("Receiving file: {}", fileName);
+                }
+                try {
+                    bos.write(chunk.getContent().toByteArray());
+                } catch (IOException e) {
+                    log.error("Error writing file chunk", e);
+                    responseObserver.onError(e);
+                }
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                log.error("Error receiving file", t);
+            }
+
+            @Override
+            public void onCompleted() {
+                try {
+                    String uploadFileName =  "grpc_" + UUID.randomUUID().toString() + "_" + fileName;
+                    // Dosyayı bir dizine kaydediyoruz. (Dizin var mı kontrol edin!)
+                    File outputFile = new File(uploadDir + File.separator + uploadFileName);
+                    // Eğer klasör yoksa oluşturabilirsiniz:
+                    outputFile.getParentFile().mkdirs();
+                    Files.write(outputFile.toPath(), bos.toByteArray());
+                    log.info("File {} saved successfully", uploadFileName);
+
+                    UploadStatus status = UploadStatus.newBuilder()
+                            .setSuccess(true)
+                            .setMessage("File async uploaded successfully")
+                            .build();
+                    responseObserver.onNext(status);
+                } catch (IOException e) {
+                    log.error("Error saving file", e);
+                    UploadStatus status = UploadStatus.newBuilder()
+                            .setSuccess(false)
+                            .setMessage("Failed to save file: " + e.getMessage())
+                            .build();
+                    responseObserver.onNext(status);
+                } finally {
+                    responseObserver.onCompleted();
+                }
+            }
+        };
+    }*/
+
+    // BOS KULLANILIYOR
+/*
+    @Override
+    public StreamObserver<FileChunk> uploadAsyncFile(StreamObserver<UploadStatus> responseObserver) {
+        return new StreamObserver<FileChunk>() {
+
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            String fileName = "uploaded_file.pdf"; // Default değer, ilk chunk'ta güncellenecek
+
+            @Override
+            public void onNext(FileChunk chunk) {
+                if (chunk.getIsFirst()) {
+                    fileName = chunk.getFileName();
+                    log.info("Receiving file: {}", fileName);
+                }
+                try {
+                    bos.write(chunk.getContent().toByteArray());
+                } catch (IOException e) {
+                    log.error("Error writing file chunk", e);
+                    responseObserver.onError(e);
+                }
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                log.error("Error receiving file", t);
+            }
+
+            @Override
+            public void onCompleted() {
+                String uploadFileName = "grpc_" + UUID.randomUUID().toString() + "_" + fileName;
+                File outputFile = new File(uploadDir + File.separator + uploadFileName);
+                outputFile.getParentFile().mkdirs(); // Klasör yoksa oluştur
+
+                try (BufferedOutputStream bosStream = new BufferedOutputStream(new FileOutputStream(outputFile))) {
+                    bos.writeTo(bosStream); // BufferedOutputStream ile yazma işlemi
+                    bosStream.flush();
+                    log.info("File {} saved successfully", uploadFileName);
+
+                    UploadStatus status = UploadStatus.newBuilder()
+                            .setSuccess(true)
+                            .setMessage("File async uploaded successfully")
+                            .build();
+                    responseObserver.onNext(status);
+                } catch (IOException e) {
+                    log.error("Error saving file", e);
+                    UploadStatus status = UploadStatus.newBuilder()
+                            .setSuccess(false)
+                            .setMessage("Failed to save file: " + e.getMessage())
+                            .build();
+                    responseObserver.onNext(status);
+                } finally {
+                    responseObserver.onCompleted();
+                }
+            }
+        };
+    }*/
+
+    /*
+
+    private final ExecutorService executorService = new ThreadPoolExecutor(
+            10, 100, 60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(1000)
+    );
+
+    @Override
+    public StreamObserver<FileChunk> uploadAsyncFile(StreamObserver<UploadStatus> responseObserver) {
+        return new StreamObserver<FileChunk>() {
+
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            String fileName = "uploaded_file.pdf"; // Default değer, ilk chunk'ta güncellenecek
+
+            @Override
+            public void onNext(FileChunk chunk) {
+                if (chunk.getIsFirst()) {
+                    fileName = chunk.getFileName();
+                    log.info("Receiving file: {}", fileName);
+                }
+                try {
+                    bos.write(chunk.getContent().toByteArray());
+                } catch (IOException e) {
+                    log.error("Error writing file chunk", e);
+                    responseObserver.onError(e);
+                }
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                log.error("Error receiving file", t);
+            }
+
+            @Override
+            public void onCompleted() {
+                // Dosya kaydetme işlemini ExecutorService ile başlat
+                executorService.submit(() -> {
+                    String uploadFileName = "grpc_" + UUID.randomUUID().toString() + "_" + fileName;
+                    File outputFile = new File(uploadDir + File.separator + uploadFileName);
+                    outputFile.getParentFile().mkdirs(); // Klasör yoksa oluştur
+
+                    try (BufferedOutputStream bosStream = new BufferedOutputStream(new FileOutputStream(outputFile))) {
+                        bos.writeTo(bosStream); // BufferedOutputStream ile yazma işlemi
+                        bosStream.flush();
+                        log.info("File {} saved successfully", uploadFileName);
+
+                        // Dosya kaydedildikten sonra başarılı yanıt gönder
+                        UploadStatus status = UploadStatus.newBuilder()
+                                .setSuccess(true)
+                                .setMessage("File async uploaded successfully")
+                                .build();
+                        responseObserver.onNext(status);
+                    } catch (IOException e) {
+                        log.error("Error saving file", e);
+                        UploadStatus status = UploadStatus.newBuilder()
+                                .setSuccess(false)
+                                .setMessage("Failed to save file: " + e.getMessage())
+                                .build();
+                        responseObserver.onNext(status);
+                    } finally {
+                        // İşlem tamamlandığında yanıtı kapat
+                        responseObserver.onCompleted();
+                    }
+                });
+            }
+        };
+    }*/
+    private final ExecutorService executorService = Executors.newFixedThreadPool(10);
+    public StreamObserver<FileChunk> uploadAsyncFile(StreamObserver<UploadStatus> responseObserver) {
+        return new StreamObserver<FileChunk>() {
+
+            private FileOutputStream fileOutputStream;
+            private String fileName;
+            //private final String uploadDir = ""; // Kendi path'ine göre değiştir
+            private File outputFile;
+
+            @Override
+            public void onNext(FileChunk chunk) {
+                if (chunk.getIsFirst()) {
+                    fileName = chunk.getFileName();
+                    String uploadFileName = "grpc_" + UUID.randomUUID().toString() + "_" + fileName;
+                    outputFile = new File(uploadDir + File.separator + uploadFileName);
+                    outputFile.getParentFile().mkdirs(); // Klasör yoksa oluştur
+
+                    try {
+                        fileOutputStream = new FileOutputStream(outputFile);
+                        log.info("Receiving file: {}", uploadFileName);
+                    } catch (IOException e) {
+                        log.error("Error opening file stream", e);
+                        responseObserver.onError(Status.INTERNAL.withDescription("File open error").asRuntimeException());
+                    }
+                }
+                try {
+                    fileOutputStream.write(chunk.getContent().toByteArray()); // Chunk'ı dosyaya yaz
+                } catch (IOException e) {
+                    log.error("Error writing file chunk", e);
+                    responseObserver.onError(e);
+                }
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                log.error("Error receiving file", t);
+                cleanup();
+            }
+
+            @Override
+            public void onCompleted() {
+                executorService.submit(() -> {
+                    try {
+                        if (fileOutputStream != null) {
+                            fileOutputStream.close();
+                        }
+                        log.info("File {} saved successfully", outputFile.getAbsolutePath());
+
+                        UploadStatus status = UploadStatus.newBuilder()
+                                .setSuccess(true)
+                                .setMessage("File async uploaded successfully")
+                                .build();
+                        responseObserver.onNext(status);
+                    } catch (IOException e) {
+                        log.error("Error closing file", e);
+                        UploadStatus status = UploadStatus.newBuilder()
+                                .setSuccess(false)
+                                .setMessage("Failed to save file: " + e.getMessage())
+                                .build();
+                        responseObserver.onNext(status);
+                    } finally {
+                        responseObserver.onCompleted();
+                    }
+                });
+            }
+
+            private void cleanup() {
+                try {
+                    if (fileOutputStream != null) {
+                        fileOutputStream.close();
+                    }
+                } catch (IOException e) {
+                    log.error("Error closing file output stream", e);
+                }
+            }
+        };
+    }
+
+
+
 
 }
 

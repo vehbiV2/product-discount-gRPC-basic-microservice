@@ -3,6 +3,7 @@ package com.vehbiozcan.productservice.controller;
 import com.vehbiozcan.grpc.UploadStatus;
 import com.vehbiozcan.productservice.service.DiscountService;
 import com.vehbiozcan.productservice.service.FileService;
+import com.vehbiozcan.productservice.service.grpc.impl.DiscountGrpcServiceImpl;
 import com.vehbiozcan.productservice.service.grpc.util.ExcelLogger;
 import com.vehbiozcan.productservice.service.grpc.util.GrpcLoggerUtil;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class FileController {
 
     private final FileService fileService;
     private final GrpcLoggerUtil grpcLoggerUtil;
+    private final DiscountGrpcServiceImpl discountGrpcService;
     @Autowired
     private ExcelLogger excelLogger;
 
@@ -43,4 +45,25 @@ public class FileController {
                     .body(status.getMessage());
         }
     }
+
+
+    @PostMapping("/upload-async")
+    public ResponseEntity<String> uploadFileAsync(@RequestParam("file") MultipartFile file) throws InterruptedException {
+        long startEpoch = System.currentTimeMillis();
+        UploadStatus status = discountGrpcService.uploadAsyncFile(file);
+        long endEpoch = System.currentTimeMillis();
+        long duration = endEpoch - startEpoch;
+        if (status.getSuccess()) {
+            //grpcLoggerUtil.log(duration);
+            //excelLogger.log(duration);
+            return ResponseEntity.ok(status.getMessage());
+        } else {
+            //grpcLoggerUtil.log(-1);
+            //excelLogger.log(-1);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(status.getMessage());
+        }
+    }
+
+
 }
