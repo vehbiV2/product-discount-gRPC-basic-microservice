@@ -7,20 +7,31 @@ import com.vehbiozcan.discountservice.repository.DiscountRepository;
 import com.vehbiozcan.grpc.*;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
+import org.springframework.beans.factory.annotation.Value;
 
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @GrpcService
 @RequiredArgsConstructor
+@Slf4j
 public class DiscountGrpcService extends DiscountServiceGrpc.DiscountServiceImplBase {
 
     private final DiscountRepository discountRepository;
     private final CategoryRepository categoryRepository;
+
+    @Value("${file.upload_dir}")
+    private String uploadDir;
 
     // Bu bizim proto dosyasında oluşturuduğumuz metodun java ya compile edilmiş halidir.
     @Override
@@ -91,5 +102,63 @@ public class DiscountGrpcService extends DiscountServiceGrpc.DiscountServiceImpl
         // Kanalı kapattık
         responseObserver.onCompleted();
     }
+
+    @Override
+    public StreamObserver<FileChunk> uploadFile(StreamObserver<UploadStatus> responseObserver) {
+        return new StreamObserver<FileChunk>() {
+
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            String fileName = "uploaded_file.pdf"; // default değer, ilk chunk'ta güncellenecek
+
+            @Override
+            public void onNext(FileChunk chunk) {
+                // İlk chunk'ta dosya adını da gönderiyoruz
+                if (chunk.getIsFirst()) {
+                    fileName = chunk.getFileName();
+                    log.info("Receiving file: {}", fileName);
+                }
+                try {
+                    bos.write(chunk.getContent().toByteArray());
+                } catch (IOException e) {
+                    log.error("Error writing file chunk", e);
+                    responseObserver.onError(e);
+                }
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                log.error("Error receiving file", t);
+            }
+
+            @Override
+            public void onCompleted() {
+                try {
+                    String uploadFileName =  "grpc_" + UUID.randomUUID().toString() + "_" + fileName;
+                    // Dosyayı bir dizine kaydediyoruz. (Dizin var mı kontrol edin!)
+                    File outputFile = new File(uploadDir + File.separator + uploadFileName);
+                    // Eğer klasör yoksa oluşturabilirsiniz:
+                    outputFile.getParentFile().mkdirs();
+                    Files.write(outputFile.toPath(), bos.toByteArray());
+                    log.info("File {} saved successfully", uploadFileName);
+
+                    UploadStatus status = UploadStatus.newBuilder()
+                            .setSuccess(true)
+                            .setMessage("File uploaded successfully")
+                            .build();
+                    responseObserver.onNext(status);
+                } catch (IOException e) {
+                    log.error("Error saving file", e);
+                    UploadStatus status = UploadStatus.newBuilder()
+                            .setSuccess(false)
+                            .setMessage("Failed to save file: " + e.getMessage())
+                            .build();
+                    responseObserver.onNext(status);
+                } finally {
+                    responseObserver.onCompleted();
+                }
+            }
+        };
+    }
+
 }
 
