@@ -29,18 +29,22 @@ public class FileController {
 
     // Yeni: Dosya upload endpoint'i
     @PostMapping("/upload")
-    public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file,
+                                             @RequestParam("thread") int thread,
+                                             @RequestParam("rampUp") int rampUp,
+                                             @RequestParam("fileSize") int fileSize) {
+
         long startEpoch = System.currentTimeMillis();
         UploadStatus status = fileService.uploadFile(file);
         long endEpoch = System.currentTimeMillis();
         long duration = endEpoch - startEpoch;
         if (status.getSuccess()) {
             grpcLoggerUtil.log(duration);
-            excelLogger.log(duration);
+            excelLogger.log(duration,fileSize,thread,rampUp);
             return ResponseEntity.ok(status.getMessage());
         } else {
             grpcLoggerUtil.log(-1);
-            excelLogger.log(-1);
+            excelLogger.log(-1,fileSize,thread,rampUp);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(status.getMessage());
         }
@@ -48,18 +52,21 @@ public class FileController {
 
 
     @PostMapping("/upload-async")
-    public ResponseEntity<String> uploadFileAsync(@RequestParam("file") MultipartFile file) throws InterruptedException {
+    public ResponseEntity<String> uploadFileAsync(@RequestParam("file") MultipartFile file,
+                                                  @RequestParam("thread") int thread,
+                                                  @RequestParam("rampUp") int rampUp,
+                                                  @RequestParam("fileSize") int fileSize) throws InterruptedException {
         long startEpoch = System.currentTimeMillis();
         UploadStatus status = discountGrpcService.uploadAsyncFile(file);
         long endEpoch = System.currentTimeMillis();
         long duration = endEpoch - startEpoch;
         if (status.getSuccess()) {
-            //grpcLoggerUtil.log(duration);
-            //excelLogger.log(duration);
+            grpcLoggerUtil.log(duration);
+            excelLogger.log(duration,fileSize,thread,rampUp);
             return ResponseEntity.ok(status.getMessage());
         } else {
-            //grpcLoggerUtil.log(-1);
-            //excelLogger.log(-1);
+            grpcLoggerUtil.log(-1);
+            excelLogger.log(duration,fileSize,thread,rampUp);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(status.getMessage());
         }
