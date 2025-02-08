@@ -6,6 +6,7 @@ option java_multiple_files = true;
 service DiscountService {
     rpc getDiscount(DiscountRequest) returns (DiscountResponse);
     rpc getAllDiscount(Empty) returns (DiscountListResponse);
+    rpc uploadFile(stream FileChunk) returns (UploadStatus);
 }
 
 message DiscountRequest {
@@ -38,4 +39,17 @@ message Response {
     string message = 2;
 }
 
+// Dosya upload için kullanılan mesajlar:
+message FileChunk {
+    // Her chunk’daki dosya içeriği (binary)
+    bytes content = 1;
+    // İlk chunk’da dosya adını belirtebiliriz
+    string fileName = 2;
+    // İlk chunk olup olmadığını belirten bayrak
+    bool isFirst = 3;
+}
 
+message UploadStatus {
+    bool success = 1;
+    string message = 2;
+}

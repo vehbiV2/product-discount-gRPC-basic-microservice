@@ -1,13 +1,11 @@
 package com.vehbiozcan.productservice.service;
 
-import com.vehbiozcan.grpc.DiscountListResponse;
-import com.vehbiozcan.grpc.DiscountRequest;
-import com.vehbiozcan.grpc.DiscountResponse;
-import com.vehbiozcan.grpc.DiscountServiceGrpc;
+import com.vehbiozcan.grpc.*;
 import com.vehbiozcan.productservice.model.Product;
 import com.vehbiozcan.productservice.service.grpc.impl.DiscountGrpcServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -33,5 +31,7 @@ public class DiscountService {
     public DiscountListResponse getAllDiscount(){
         return discountGrpcService.getAllDiscount();
     }
+
+
 
 }
