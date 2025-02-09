@@ -346,13 +346,15 @@ public class DiscountGrpcService extends DiscountServiceGrpc.DiscountServiceImpl
             }
         };
     }*/
-    private final ExecutorService executorService = Executors.newFixedThreadPool(10);
+
+    // FOS Kullanılıyor gelen veri direkt diske yazılıyor karşı tarafta manuel delay işlemi var
+
+   private final ExecutorService executorService = Executors.newFixedThreadPool(10);
     public StreamObserver<FileChunk> uploadAsyncFile(StreamObserver<UploadStatus> responseObserver) {
         return new StreamObserver<FileChunk>() {
 
             private FileOutputStream fileOutputStream;
             private String fileName;
-            //private final String uploadDir = ""; // Kendi path'ine göre değiştir
             private File outputFile;
 
             @Override
@@ -423,7 +425,6 @@ public class DiscountGrpcService extends DiscountServiceGrpc.DiscountServiceImpl
             }
         };
     }
-
 
 
 

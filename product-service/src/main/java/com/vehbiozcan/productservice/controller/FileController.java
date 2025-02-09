@@ -72,5 +72,34 @@ public class FileController {
         }
     }
 
+    @PostMapping("/upload-async2")
+    public ResponseEntity<String> uploadFileAsyncThrow(@RequestParam("file") MultipartFile file,
+                                                  @RequestParam("thread") int thread,
+                                                  @RequestParam("rampUp") int rampUp,
+                                                  @RequestParam("fileSize") int fileSize){
+        long startEpoch = System.currentTimeMillis();
+        long duration;
+        UploadStatus status = null;
+        try {
+            status = discountGrpcService.uploadAsyncFile(file);
+            long endEpoch = System.currentTimeMillis();
+            duration = endEpoch - startEpoch;
+        } catch (InterruptedException e) {
+            duration = -1;
+            System.out.println(e.getMessage());
+        }
+
+        if (status.getSuccess()) {
+            grpcLoggerUtil.log(duration);
+            excelLogger.log(duration,fileSize,thread,rampUp);
+            return ResponseEntity.ok(status.getMessage());
+        } else {
+            grpcLoggerUtil.log(-1);
+            excelLogger.log(duration,fileSize,thread,rampUp);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(status.getMessage());
+        }
+    }
+
 
 }

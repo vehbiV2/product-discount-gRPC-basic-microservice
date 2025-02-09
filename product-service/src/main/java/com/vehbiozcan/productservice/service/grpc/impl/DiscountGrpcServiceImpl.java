@@ -227,7 +227,68 @@ public class DiscountGrpcServiceImpl implements IDiscountGrpcService {
                     isFirst = false;
                 }
                 requestObserver.onNext(chunkBuilder.build());
-                Thread.sleep(20);
+                Thread.sleep(10);
+            }
+        } catch (IOException e) {
+            requestObserver.onError(e);
+            throw new RuntimeException("File reading error", e);
+        }
+
+        requestObserver.onCompleted();
+
+        if (!finishLatch.await(2, TimeUnit.MINUTES)) {
+            throw new RuntimeException("Upload timed out");
+        }
+        return statusResponse[0];
+    }
+
+
+    public UploadStatus uploadAsyncFileQueue(MultipartFile file) throws InterruptedException {
+        final CountDownLatch finishLatch = new CountDownLatch(1);
+        final UploadStatus[] statusResponse = new UploadStatus[1];
+
+        StreamObserver<UploadStatus> responseObserver = new StreamObserver<UploadStatus>() {
+            @Override
+            public void onNext(UploadStatus value) {
+                System.out.println("Server Response: " + value.getMessage());
+                statusResponse[0] = value;
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                System.err.println("Error: " + t.getMessage());
+                statusResponse[0] = UploadStatus.newBuilder()
+                        .setSuccess(false)
+                        .setMessage("Upload failed: " + t.getMessage())
+                        .build();
+                finishLatch.countDown();
+            }
+
+            @Override
+            public void onCompleted() {
+                System.out.println("File upload completed.");
+                finishLatch.countDown();
+            }
+        };
+
+        StreamObserver<FileChunk> requestObserver = discountAsyncStub.uploadAsyncFile(responseObserver);
+
+        try (InputStream is = file.getInputStream()) {
+            byte[] buffer = new byte[128 * 1024];
+            int bytesRead;
+            boolean isFirst = true;
+
+            while ((bytesRead = is.read(buffer)) != -1) {
+                FileChunk.Builder chunkBuilder = FileChunk.newBuilder()
+                        .setContent(ByteString.copyFrom(buffer, 0, bytesRead));
+
+                if (isFirst) {
+                    chunkBuilder.setFileName(file.getOriginalFilename())
+                            .setIsFirst(true);
+                    isFirst = false;
+                }
+                requestObserver.onNext(chunkBuilder.build());
+                Thread.sleep(10);
             }
         } catch (IOException e) {
             requestObserver.onError(e);
