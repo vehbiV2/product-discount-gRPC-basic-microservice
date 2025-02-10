@@ -260,7 +260,7 @@ public class DiscountGrpcServiceImpl implements IDiscountGrpcService {
     // Temp dosyaların kaydedileceği dizin
     private final File tempDir = new File("D:/temp/");
 
-    public UploadStatus processIncomingFile(MultipartFile multipartFile, int thread, int rampUp, int fileSize) {
+    public UploadStatus processIncomingFile2(MultipartFile multipartFile, int thread, int rampUp, int fileSize) {
         this.thread = thread;
         this.rampUp = rampUp;
         this.fileSize = fileSize;
@@ -283,7 +283,7 @@ public class DiscountGrpcServiceImpl implements IDiscountGrpcService {
         return UploadStatus.newBuilder().setSuccess(true).setMessage("Dosya kuyruğa eklendi").build();
     }
 
-    private void startQueueProcessor() {
+    /*private void startQueueProcessor() {
         scheduler.scheduleAtFixedRate(() -> {
             try {
                 List<String> filePaths = new ArrayList<>();
@@ -304,7 +304,74 @@ public class DiscountGrpcServiceImpl implements IDiscountGrpcService {
                 System.err.println("Kuyruk işlenirken hata: " + e.getMessage());
             }
         }, 0, 500, TimeUnit.MILLISECONDS);
+    }*/
+
+
+    // Yeni processSingleFile metodu
+    private void processSingleFile(String filePath) {
+        File file = new File(filePath);
+        if (file.exists()) {
+            long startEpoch = System.currentTimeMillis();
+            uploadFileViaGrpc(new FileUploadTask(file, file.length()));
+            long endEpoch = System.currentTimeMillis();
+            long duration = endEpoch - startEpoch;
+            excelLogger.log(duration, fileSize, thread, rampUp);
+            file.delete(); // İşlenen temp dosyayı sil
+        } else {
+            System.err.println("Dosya bulunamadı: " + filePath);
+        }
     }
+
+    private final ExecutorService consumerExecutor = Executors.newFixedThreadPool(4);
+    // Değiştirilen startQueueProcessor metodu
+    private void startQueueProcessor() {
+        for (int i = 0; i < 4; i++) {
+            consumerExecutor.submit(() -> {
+                while (!Thread.currentThread().isInterrupted()) {
+                    try {
+                        String filePath = fileQueue.take();
+                        processSingleFile(filePath);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    } catch (Exception e) {
+                        System.err.println("Dosya işlenirken hata: " + e.getMessage());
+                    }
+                }
+            });
+        }
+    }
+
+    // Değiştirilen processIncomingFile metodu
+    public UploadStatus processIncomingFile(MultipartFile multipartFile, int thread, int rampUp, int fileSize) {
+        this.thread = thread;
+        this.rampUp = rampUp;
+        this.fileSize = fileSize;
+        String uniqueFileName = UUID.randomUUID() + "_" + multipartFile.getOriginalFilename();
+        File tempFile = new File(tempDir, uniqueFileName);
+
+        try (InputStream in = multipartFile.getInputStream();
+             OutputStream out = new FileOutputStream(tempFile)) {
+            byte[] buffer = new byte[64 * 1024];
+            int bytesRead;
+            while ((bytesRead = in.read(buffer)) != -1) {
+                out.write(buffer, 0, bytesRead);
+            }
+
+            // Dosyayı hemen kuyruğa ekle ve sonucu dön
+            fileQueue.add(tempFile.getAbsolutePath());
+            System.out.println("Dosya kuyruğa eklendi: " + tempFile.getName());
+
+            return UploadStatus.newBuilder()
+                    .setSuccess(true)
+                    .setMessage("Dosya kuyruğa başarıyla eklendi")
+                    .build();
+
+        } catch (IOException e) {
+            throw new RuntimeException("Temp dosya kaydedilirken hata oluştu", e);
+        }
+    }
+
 
     private UploadStatus uploadFileViaGrpc(FileUploadTask task) {
         final CountDownLatch finishLatch = new CountDownLatch(1);
