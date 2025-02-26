@@ -106,17 +106,14 @@ public class FileController {
                                                        @RequestParam("thread") int thread,
                                                        @RequestParam("rampUp") int rampUp,
                                                        @RequestParam("fileSize") int fileSize){
-        //long startEpoch = System.currentTimeMillis();
+
         UploadStatus status = discountGrpcService.processIncomingFile(file, thread, rampUp, fileSize);
-        //long endEpoch = System.currentTimeMillis();
-        //long duration = endEpoch - startEpoch;
+
         if (status.getSuccess()) {
-            //grpcLoggerUtil.log(duration);
-            //excelLogger.log(duration,fileSize,thread,rampUp);
+
             return ResponseEntity.ok(status.getMessage());
         } else {
-            //grpcLoggerUtil.log(-1);
-            //excelLogger.log(duration,fileSize,thread,rampUp);
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(status.getMessage());
         }
